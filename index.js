@@ -1,7 +1,11 @@
 //이미지 리사이징 라이브러리
 const sharp = require("sharp");
 
-const { S3Client } = require("@aws-sdk/client");
+const {
+  S3Client,
+  GetObjectCommand,
+  PutObjectCommand,
+} = require("@aws-sdk/client");
 
 //함수가 aws 람다에서 돌아가기 때문에 스크릿키랑 아이디를 자동으로 넣어준다 = > 아무것도 넣어줄 필요 x
 const s3 = new S3Client();
@@ -15,17 +19,26 @@ exports.handler = async (event, context, callback) => {
   const requiredFormat = ext === "jpg" ? "jpeg" : ext;
   console.log("name", filename, "ext", ext);
   try {
-    const s3Object = await s3.getObject({ Bucket, Key });
+    const s3Object = await s3.send(new GetObjectCommand({ Bucket, Key }));
+    const buffer = [];
+    for await (const data of GetObjectCommand.Body) {
+      buffer.push(data);
+    }
+    const imageBuffer = Buffer.concat(buffer);
+
     console.log("original", s3Object);
-    await sharp(s3Object.Body)
+    const resizedImage = await sharp(imageBuffer)
       .resize(200, 200, { fit: "inside" })
-      .toFormat(requireFormat)
+      .toFormat(requiredFormat)
       .toBuffer();
-    await s3.putObject({
-      Bucket,
-      Key: `thumb/${filename}`,
-      Body: resizedImage,
-    });
+    await s3.send(
+      new PutObjectCommand({
+        Bucket,
+        Key: `thumb/${filename}`,
+        Body: resizedImage,
+      })
+    );
+
     console.log("put", resizedImage.length);
     return callback(null, `thumb/${filename}`);
   } catch (error) {
