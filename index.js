@@ -10,7 +10,7 @@ const {
 //함수가 aws 람다에서 돌아가기 때문에 스크릿키랑 아이디를 자동으로 넣어준다 = > 아무것도 넣어줄 필요 x
 const s3 = new S3Client();
 
-//람다는 3개의 매개변수를 제공해서 이 함수를 호출해준다.
+//람다는 3개의 매개변수를 제공하고 이 함수를 호출해준다.
 exports.handler = async (event, context, callback) => {
   const Bucket = event.Records[0].s3.bucket.name;
   const Key = decodeURIComponent(event.Records[0].s3.object.key); //original/리버풀.png
@@ -25,7 +25,7 @@ exports.handler = async (event, context, callback) => {
       buffers.push(data);
     }
     const imageBuffer = Buffer.concat(buffers);
-    console.log("original", s3Object);
+    console.log("original", getObject);
     const resizedImage = await sharp(imageBuffer)
       .resize(200, 200, { fit: "inside" })
       .toFormat(requiredFormat)
